@@ -32,6 +32,8 @@
       --btn-bg: #1e2f42;
       --btn-hover: #243a52;
       --btn-active-border: #1a8fff;
+      --move-color: #9db3c8;
+      --arrow-color: #f0a83c;
       --font: 'Inter', system-ui, sans-serif;
       --panel-width: 160px;
     }
@@ -71,7 +73,8 @@
       flex-direction: column;
       gap: 0;
       padding: 0;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       z-index: 10;
     }
 
@@ -94,6 +97,86 @@
       color: var(--text-muted);
       margin-top: 3px;
       opacity: 0.6;
+    }
+
+    /* ─── MODE SWITCHER (always visible, both modes) ─── */
+    .mode-switch {
+      display: flex;
+      padding: 10px 12px;
+      gap: 6px;
+      border-bottom: 1px solid var(--panel-border);
+      flex-shrink: 0;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 7px;
+      border: 1px solid var(--panel-border);
+      background: var(--btn-bg);
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .mode-btn:hover { background: var(--btn-hover); }
+
+    .mode-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Mode-scoped section visibility. !important guarantees the hide wins
+       over the mobile bottom-bar rule below, which sets display:flex on
+       these same section classes unconditionally. */
+    #panel:not(.tactics-mode) .mode-tactics { display: none !important; }
+    #panel.tactics-mode .mode-shot { display: none !important; }
+
+    /* ─── TACTICS: tray "add" buttons (reuse .action-btn look) ─── */
+    .tray-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      line-height: 1;
+    }
+
+    .tray-dot.ball-dot {
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      font-size: 9px;
+    }
+
+    .tray-btn { cursor: grab; touch-action: none; }
+    .tray-btn.dragging { opacity: 0.4; }
+
+    /* ─── DRAG GHOST (preview while dragging a new token from the tray) ─── */
+    #drag-ghost {
+      position: fixed;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      border: 2px solid rgba(255,255,255,0.7);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
     }
 
     /* ─── TOOL BUTTONS ─── */
@@ -159,6 +242,20 @@
       color: var(--goal-color);
     }
     .tool-btn.goal-btn { --active-color: var(--goal-color); }
+
+    .tool-btn.move-btn .dot {
+      background: rgba(157,179,200,0.2);
+      border-color: var(--move-color);
+      color: var(--move-color);
+    }
+    .tool-btn.move-btn { --active-color: var(--move-color); }
+
+    .tool-btn.arrow-btn .dot {
+      background: rgba(240,168,60,0.2);
+      border-color: var(--arrow-color);
+      color: var(--arrow-color);
+    }
+    .tool-btn.arrow-btn { --active-color: var(--arrow-color); }
 
     .tool-btn .btn-label {
       font-size: 11px;
@@ -451,6 +548,22 @@
         width: 15px;
         height: 15px;
       }
+
+      .mode-switch {
+        padding: 0;
+        border-bottom: none;
+        border-right: 1px solid var(--panel-border);
+        margin-right: 2px;
+        padding-right: 6px;
+        flex: 0 0 auto;
+        gap: 4px;
+      }
+
+      .mode-btn {
+        padding: 8px 6px;
+        font-size: 8px;
+        white-space: nowrap;
+      }
     }
 
   </style>
@@ -465,7 +578,12 @@
       <div class="subtitle">Coach Tool</div>
     </div>
 
-    <div class="tool-section">
+    <div class="mode-switch">
+      <button class="mode-btn active" id="mode-shot-btn" onclick="switchMode('shot')">Shot Tracker</button>
+      <button class="mode-btn" id="mode-tactics-btn" onclick="switchMode('tactics')">Tactics</button>
+    </div>
+
+    <div class="tool-section mode-shot">
       <div class="section-label">Mark</div>
 
       <button class="tool-btn attempt-btn" id="btn-attempt" onclick="setTool('attempt')" title="Attempt (off target)">
@@ -485,7 +603,7 @@
       </button>
     </div>
 
-    <div class="stats-section">
+    <div class="stats-section mode-shot">
       <div class="section-label">Session</div>
 
       <div class="stat-row">
@@ -513,7 +631,7 @@
       </div>
     </div>
 
-    <div class="actions-section">
+    <div class="actions-section mode-shot">
       <button class="action-btn save-btn" onclick="savePitch()" title="Save Image">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
           <path d="M2 2h9l3 3v9a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1zm7 0v4H5V2h4zm2 9H5v3h6v-3z"/>
@@ -521,6 +639,59 @@
         <span class="btn-text">Save Image</span>
       </button>
       <button class="action-btn reset-btn" onclick="confirmReset()" title="Reset">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 2a6 6 0 100 12A6 6 0 008 2zM1 8a7 7 0 1114 0A7 7 0 011 8z"/>
+          <path d="M8 5v3l2 2-1 1-2.5-2.5V5H8z"/>
+        </svg>
+        <span class="btn-text">Reset</span>
+      </button>
+    </div>
+
+    <div class="tool-section mode-tactics" id="tactics-tray-section">
+      <div class="section-label">Drag onto pitch</div>
+
+      <button class="action-btn tray-btn tray-red" id="tray-red-btn" title="Drag onto the pitch to add a red player">
+        <span class="tray-dot" style="background:var(--goal-color)"></span>
+        <span class="btn-text">Red Player</span>
+      </button>
+      <button class="action-btn tray-btn tray-blue" id="tray-blue-btn" title="Drag onto the pitch to add a blue player">
+        <span class="tray-dot" style="background:var(--attempt-color)"></span>
+        <span class="btn-text">Blue Player</span>
+      </button>
+      <button class="action-btn tray-btn tray-ball" id="tray-ball-btn" title="Drag onto the pitch to add the ball">
+        <span class="tray-dot ball-dot">⚽</span>
+        <span class="btn-text">Ball</span>
+      </button>
+    </div>
+
+    <div class="tool-section mode-tactics" id="tactics-tool-section">
+      <div class="section-label">Tool</div>
+
+      <button class="tool-btn move-btn active" id="btn-move" onclick="setTacticsTool('move')" title="Move tokens">
+        <div class="dot"></div>
+        <div>
+          <div class="btn-label">Move</div>
+          <div class="btn-sub">Drag to reposition</div>
+        </div>
+      </button>
+
+      <button class="tool-btn arrow-btn" id="btn-arrow" onclick="setTacticsTool('arrow')" title="Draw movement arrows">
+        <div class="dot"></div>
+        <div>
+          <div class="btn-label">Arrow</div>
+          <div class="btn-sub">Drag from a token</div>
+        </div>
+      </button>
+    </div>
+
+    <div class="actions-section mode-tactics">
+      <button class="action-btn save-btn" onclick="saveTactics()" title="Save Image">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M2 2h9l3 3v9a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1zm7 0v4H5V2h4zm2 9H5v3h6v-3z"/>
+        </svg>
+        <span class="btn-text">Save Image</span>
+      </button>
+      <button class="action-btn reset-btn" onclick="confirmResetTactics()" title="Reset">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
           <path d="M8 2a6 6 0 100 12A6 6 0 008 2zM1 8a7 7 0 1114 0A7 7 0 011 8z"/>
           <path d="M8 5v3l2 2-1 1-2.5-2.5V5H8z"/>
@@ -539,6 +710,7 @@
 </div>
 
 <div id="cursor-indicator"></div>
+<div id="drag-ghost"></div>
 <div id="toast"></div>
 
 <script>
@@ -554,14 +726,26 @@ window.addEventListener('resize', setViewportHeightVar);
 window.addEventListener('orientationchange', setViewportHeightVar);
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
+let currentMode = 'shot'; // 'shot' | 'tactics'
 let activeTool = null;   // 'attempt' | 'goal' | null
 let markers = [];        // { type, x, y, dist } — x/y in 0..1 pitch coords
 let pitchImg = new Image();
 let canvasW = 0, canvasH = 0;
 let isInitialized = false;
 
+// ─── TACTICS STATE ────────────────────────────────────────────────────────────
+let tacticsTool = 'move'; // 'move' | 'arrow'
+let tacticsTokens = [];   // { id, kind: 'player'|'ball', team: 'red'|'blue'|null, number, x, y } — x/y in 0..1
+let tacticsArrows = [];   // { fromX, fromY, toX, toY, color } — fixed coords, not live-linked to a token
+let nextTacticsId = 1;
+let nextRedNumber = 1;
+let nextBlueNumber = 1;
+let tacticsDrag = null;   // null | { kind:'newToken', team, tokenKind, pointerId } | { kind:'moveToken', tokenId, pointerId } | { kind:'arrow', tokenId, fromX, fromY, color, pointerId }
+let arrowPreview = null;  // { fromX, fromY, toX, toY, color } while drawing an arrow
+
 const canvas = document.getElementById('pitch-canvas');
 const ctx = canvas.getContext('2d');
+const dragGhost = document.getElementById('drag-ghost');
 
 // ─── PITCH REAL-WORLD DIMENSIONS (half-pitch) ────────────────────────────────
 // Standard full pitch ≈ 105m × 68m, so half = 52.5m deep × 68m wide
@@ -570,6 +754,7 @@ const ctx = canvas.getContext('2d');
 // Pitch: 68m wide, 52.5m deep. Goal on top edge at centre.
 const PITCH_W_M = 68;
 const PITCH_H_M = 52.5;
+const PITCH_H_M_FULL = 105; // full pitch depth, for Tactics mode
 const GOAL_X_M = PITCH_W_M / 2;   // 34m from left
 const GOAL_Y_M = 0;               // top edge
 
@@ -608,19 +793,44 @@ function updateToolUI() {
   }
 }
 
+// ─── MODE SWITCHING ───────────────────────────────────────────────────────────
+function switchMode(mode) {
+  if (mode === currentMode) return;
+  currentMode = mode;
+
+  document.getElementById('panel').classList.toggle('tactics-mode', mode === 'tactics');
+  document.getElementById('mode-shot-btn').classList.toggle('active', mode === 'shot');
+  document.getElementById('mode-tactics-btn').classList.toggle('active', mode === 'tactics');
+
+  // Cancel any in-flight drag/tool state from the mode being left.
+  tacticsDrag = null;
+  arrowPreview = null;
+  document.getElementById('cursor-indicator').style.opacity = '0';
+
+  resizeCanvas();
+}
+
+function setTacticsTool(tool) {
+  tacticsTool = tool;
+  document.getElementById('btn-move').classList.toggle('active', tool === 'move');
+  document.getElementById('btn-arrow').classList.toggle('active', tool === 'arrow');
+}
+
 // ─── CANVAS SETUP ─────────────────────────────────────────────────────────────
 function resizeCanvas() {
   const container = document.getElementById('pitch-container');
   const cW = container.clientWidth - 20;
   const cH = container.clientHeight - 20;
 
-  // Keep aspect ratio of the original image (3765 × 2848)
-  const imgRatio = 3765 / 2848;
+  // Shot Tracker: keep aspect ratio of the half-pitch image (3765 × 2848).
+  // Tactics: a full pitch drawn tall/portrait (68m wide × 105m deep) so it
+  // suits phone screens as well as desktop.
+  const ratio = currentMode === 'tactics' ? (PITCH_W_M / PITCH_H_M_FULL) : (3765 / 2848);
   let w = cW;
-  let h = w / imgRatio;
+  let h = w / ratio;
   if (h > cH) {
     h = cH;
-    w = h * imgRatio;
+    w = h * ratio;
   }
 
   canvas.width = Math.floor(w);
@@ -634,6 +844,14 @@ function resizeCanvas() {
 // ─── DRAWING ──────────────────────────────────────────────────────────────────
 function redraw() {
   ctx.clearRect(0, 0, canvasW, canvasH);
+
+  if (currentMode === 'tactics') {
+    drawFullPitch();
+    tacticsArrows.forEach(a => drawArrowLine(a));
+    if (arrowPreview) drawArrowLine(arrowPreview);
+    tacticsTokens.forEach(t => drawToken(t));
+    return;
+  }
 
   if (pitchImg.complete && pitchImg.naturalWidth) {
     ctx.drawImage(pitchImg, 0, 0, canvasW, canvasH);
@@ -735,6 +953,157 @@ function drawMarker(m) {
   ctx.textAlign = 'left';
 }
 
+// ─── TACTICS: FULL PITCH ──────────────────────────────────────────────────────
+// Drawn tall/portrait (68m wide × 105m deep), goal at top and bottom, halfway
+// line and centre circle in the middle — same programmatic style as the
+// fallback half-pitch above, just mirrored for both ends. Each drawing
+// function takes an optional context so Save can render to an off-screen
+// canvas with the exact same code path as the live view.
+function drawFullPitch(c = ctx) {
+  c.fillStyle = '#2f6b3a';
+  c.fillRect(0, 0, canvasW, canvasH);
+
+  const stripes = 12;
+  for (let i = 0; i < stripes; i++) {
+    if (i % 2 === 0) {
+      c.fillStyle = 'rgba(0,0,0,0.06)';
+      c.fillRect(0, i * canvasH / stripes, canvasW, canvasH / stripes);
+    }
+  }
+
+  c.strokeStyle = 'rgba(255,255,255,0.85)';
+  c.lineWidth = Math.max(1.5, canvasW * 0.0035);
+
+  // Outer boundary
+  const m = canvasW * 0.02;
+  c.strokeRect(m, m, canvasW - m * 2, canvasH - m * 2);
+
+  // Halfway line + centre circle/spot
+  c.beginPath();
+  c.moveTo(m, canvasH / 2);
+  c.lineTo(canvasW - m, canvasH / 2);
+  c.stroke();
+
+  c.beginPath();
+  c.arc(canvasW / 2, canvasH / 2, canvasW * 0.16, 0, Math.PI * 2);
+  c.stroke();
+
+  c.beginPath();
+  c.arc(canvasW / 2, canvasH / 2, Math.max(2, canvasW * 0.004), 0, Math.PI * 2);
+  c.fillStyle = 'rgba(255,255,255,0.85)';
+  c.fill();
+
+  // Penalty areas, 6-yard boxes, spots and arcs — mirrored top and bottom
+  const pa_w = canvasW * 0.6;
+  const pa_h = canvasH * 0.16;
+  const pa_x = (canvasW - pa_w) / 2;
+  const sb_w = canvasW * 0.28;
+  const sb_h = canvasH * 0.055;
+  const sb_x = (canvasW - sb_w) / 2;
+  const ps_offset = canvasH * 0.105;
+
+  [{ dir: 1, base: m }, { dir: -1, base: canvasH - m }].forEach(({ dir, base }) => {
+    const pa_y = dir === 1 ? base : base - pa_h;
+    c.strokeRect(pa_x, pa_y, pa_w, pa_h);
+
+    const sb_y = dir === 1 ? base : base - sb_h;
+    c.strokeRect(sb_x, sb_y, sb_w, sb_h);
+
+    const ps_y = base + dir * ps_offset;
+    c.beginPath();
+    c.arc(canvasW / 2, ps_y, Math.max(2, canvasW * 0.004), 0, Math.PI * 2);
+    c.fillStyle = 'rgba(255,255,255,0.85)';
+    c.fill();
+
+    c.beginPath();
+    const startAngle = dir === 1 ? Math.PI * 1.13 : Math.PI * 0.13;
+    const endAngle = dir === 1 ? Math.PI * 1.87 : Math.PI * 0.87;
+    c.arc(canvasW / 2, ps_y, canvasW * 0.16, startAngle, endAngle);
+    c.stroke();
+  });
+}
+
+// ─── TACTICS: TOKENS & ARROWS ─────────────────────────────────────────────────
+function tacticsTokenRadius() {
+  return Math.max(14, canvasW * 0.032);
+}
+
+function drawToken(t, c = ctx) {
+  const cx = t.x * canvasW;
+  const cy = t.y * canvasH;
+  const radius = tacticsTokenRadius();
+
+  if (t.kind === 'ball') {
+    c.beginPath();
+    c.arc(cx, cy, radius * 0.6, 0, Math.PI * 2);
+    c.fillStyle = '#fff';
+    c.fill();
+    c.strokeStyle = '#1a1a1a';
+    c.lineWidth = Math.max(1, canvasW * 0.0025);
+    c.stroke();
+    // Simple pentagon accent so it reads as a ball, not just a dot
+    c.beginPath();
+    c.moveTo(cx, cy - radius * 0.28);
+    for (let i = 1; i <= 5; i++) {
+      const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
+      c.lineTo(cx + Math.cos(a) * radius * 0.28, cy + Math.sin(a) * radius * 0.28);
+    }
+    c.closePath();
+    c.fillStyle = '#1a1a1a';
+    c.fill();
+    return;
+  }
+
+  const rgb = t.team === 'red' ? [224, 53, 53] : [58, 139, 255];
+  const strokeColor = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+
+  c.shadowColor = strokeColor;
+  c.shadowBlur = 6;
+
+  c.beginPath();
+  c.arc(cx, cy, radius, 0, Math.PI * 2);
+  c.fillStyle = strokeColor;
+  c.fill();
+  c.shadowBlur = 0;
+
+  c.strokeStyle = 'rgba(255,255,255,0.9)';
+  c.lineWidth = Math.max(1.5, canvasW * 0.003);
+  c.stroke();
+
+  const fontSize = Math.max(10, radius * 0.9);
+  c.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillStyle = '#fff';
+  c.fillText(String(t.number), cx, cy + 1);
+  c.textAlign = 'left';
+  c.textBaseline = 'alphabetic';
+}
+
+function drawArrowLine(a, c = ctx) {
+  const fx = a.fromX * canvasW, fy = a.fromY * canvasH;
+  const tx = a.toX * canvasW, ty = a.toY * canvasH;
+  const angle = Math.atan2(ty - fy, tx - fx);
+  const headLen = Math.max(8, canvasW * 0.018);
+
+  c.strokeStyle = a.color;
+  c.fillStyle = a.color;
+  c.lineWidth = Math.max(2, canvasW * 0.0045);
+  c.lineCap = 'round';
+
+  c.beginPath();
+  c.moveTo(fx, fy);
+  c.lineTo(tx, ty);
+  c.stroke();
+
+  c.beginPath();
+  c.moveTo(tx, ty);
+  c.lineTo(tx - headLen * Math.cos(angle - Math.PI / 6), ty - headLen * Math.sin(angle - Math.PI / 6));
+  c.lineTo(tx - headLen * Math.cos(angle + Math.PI / 6), ty - headLen * Math.sin(angle + Math.PI / 6));
+  c.closePath();
+  c.fill();
+}
+
 // ─── PITCH CLICK / TOUCH ──────────────────────────────────────────────────────
 function getPitchCoords(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
@@ -744,6 +1113,7 @@ function getPitchCoords(clientX, clientY) {
 }
 
 canvas.addEventListener('click', (e) => {
+  if (currentMode !== 'shot') return;
   if (!activeTool) {
     showToast('Select Attempt or Goal first');
     return;
@@ -753,6 +1123,7 @@ canvas.addEventListener('click', (e) => {
 });
 
 canvas.addEventListener('touchend', (e) => {
+  if (currentMode !== 'shot') return;
   e.preventDefault();
   if (!activeTool) {
     showToast('Select Attempt or Goal first');
@@ -774,7 +1145,7 @@ function placeMarker(x, y) {
 const cursorEl = document.getElementById('cursor-indicator');
 
 document.addEventListener('mousemove', (e) => {
-  if (activeTool) {
+  if (currentMode === 'shot' && activeTool) {
     cursorEl.style.opacity = '0.85';
     cursorEl.style.left = e.clientX + 'px';
     cursorEl.style.top = e.clientY + 'px';
@@ -784,12 +1155,147 @@ document.addEventListener('mousemove', (e) => {
 });
 
 canvas.addEventListener('mouseenter', () => {
-  if (activeTool) canvas.style.cursor = 'none';
+  if (currentMode === 'shot' && activeTool) canvas.style.cursor = 'none';
 });
 canvas.addEventListener('mouseleave', () => {
   canvas.style.cursor = 'default';
   cursorEl.style.opacity = '0';
 });
+
+// ─── TACTICS: DRAG PLAYERS/BALL FROM TRAY ONTO THE PITCH ─────────────────────
+// Uses Pointer Events (unifies mouse/touch) with setPointerCapture so the
+// originating tray button keeps receiving move/up events even once the
+// pointer has moved over the canvas.
+function nextTeamNumber(team) {
+  if (team === 'red') return nextRedNumber++;
+  return nextBlueNumber++;
+}
+
+function setupTrayButton(id, kind, team) {
+  const btn = document.getElementById(id);
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    tacticsDrag = { kind: 'newToken', tokenKind: kind, team, pointerId: e.pointerId };
+    btn.setPointerCapture(e.pointerId);
+    btn.classList.add('dragging');
+
+    dragGhost.textContent = kind === 'ball' ? '⚽' : String(team === 'red' ? nextRedNumber : nextBlueNumber);
+    dragGhost.style.background = kind === 'ball' ? '#fff' : (team === 'red' ? 'var(--goal-color)' : 'var(--attempt-color)');
+    dragGhost.style.color = kind === 'ball' ? '#000' : '#fff';
+    dragGhost.style.left = e.clientX + 'px';
+    dragGhost.style.top = e.clientY + 'px';
+    dragGhost.style.display = 'flex';
+  });
+
+  btn.addEventListener('pointermove', (e) => {
+    if (!tacticsDrag || tacticsDrag.kind !== 'newToken' || tacticsDrag.pointerId !== e.pointerId) return;
+    dragGhost.style.left = e.clientX + 'px';
+    dragGhost.style.top = e.clientY + 'px';
+  });
+
+  const finishTrayDrag = (e) => {
+    if (!tacticsDrag || tacticsDrag.kind !== 'newToken' || tacticsDrag.pointerId !== e.pointerId) return;
+    btn.classList.remove('dragging');
+    dragGhost.style.display = 'none';
+
+    const rect = canvas.getBoundingClientRect();
+    const overCanvas = e.clientX >= rect.left && e.clientX <= rect.right &&
+                        e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+    if (overCanvas) {
+      const { x, y } = getPitchCoords(e.clientX, e.clientY);
+      if (kind === 'ball') {
+        const existingBall = tacticsTokens.find(t => t.kind === 'ball');
+        if (existingBall) {
+          existingBall.x = x;
+          existingBall.y = y;
+        } else {
+          tacticsTokens.push({ id: nextTacticsId++, kind: 'ball', team: null, number: null, x, y });
+        }
+      } else {
+        tacticsTokens.push({ id: nextTacticsId++, kind: 'player', team, number: nextTeamNumber(team), x, y });
+      }
+      redraw();
+    }
+
+    tacticsDrag = null;
+  };
+
+  btn.addEventListener('pointerup', finishTrayDrag);
+  btn.addEventListener('pointercancel', finishTrayDrag);
+}
+
+setupTrayButton('tray-red-btn', 'player', 'red');
+setupTrayButton('tray-blue-btn', 'player', 'blue');
+setupTrayButton('tray-ball-btn', 'ball', null);
+
+// ─── TACTICS: MOVE TOKENS / DRAW ARROWS ON THE PITCH ─────────────────────────
+function hitTestToken(clientX, clientY) {
+  const { x, y } = getPitchCoords(clientX, clientY);
+  const radius = tacticsTokenRadius() / canvasW; // normalized radius (approx, using width scale)
+  let closest = null;
+  let closestDist = Infinity;
+  for (const t of tacticsTokens) {
+    const d = Math.hypot(t.x - x, t.y - y);
+    if (d <= radius * 1.6 && d < closestDist) {
+      closest = t;
+      closestDist = d;
+    }
+  }
+  return closest;
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (currentMode !== 'tactics') return;
+  const token = hitTestToken(e.clientX, e.clientY);
+  if (!token) return;
+
+  canvas.setPointerCapture(e.pointerId);
+
+  if (tacticsTool === 'move') {
+    tacticsDrag = { kind: 'moveToken', tokenId: token.id, pointerId: e.pointerId };
+  } else {
+    const color = token.kind === 'ball' ? '#ffffff' : (token.team === 'red' ? '#e03535' : '#3a8bff');
+    tacticsDrag = { kind: 'arrow', tokenId: token.id, fromX: token.x, fromY: token.y, color, pointerId: e.pointerId };
+    arrowPreview = { fromX: token.x, fromY: token.y, toX: token.x, toY: token.y, color };
+  }
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  if (!tacticsDrag || tacticsDrag.pointerId !== e.pointerId) return;
+  const { x, y } = getPitchCoords(e.clientX, e.clientY);
+
+  if (tacticsDrag.kind === 'moveToken') {
+    const token = tacticsTokens.find(t => t.id === tacticsDrag.tokenId);
+    if (token) {
+      token.x = x;
+      token.y = y;
+      redraw();
+    }
+  } else if (tacticsDrag.kind === 'arrow') {
+    arrowPreview = { fromX: tacticsDrag.fromX, fromY: tacticsDrag.fromY, toX: x, toY: y, color: tacticsDrag.color };
+    redraw();
+  }
+});
+
+function finishCanvasDrag(e) {
+  if (!tacticsDrag || tacticsDrag.pointerId !== e.pointerId) return;
+
+  if (tacticsDrag.kind === 'arrow') {
+    const { x, y } = getPitchCoords(e.clientX, e.clientY);
+    const dist = Math.hypot(x - tacticsDrag.fromX, y - tacticsDrag.fromY);
+    if (dist > 0.02) {
+      tacticsArrows.push({ fromX: tacticsDrag.fromX, fromY: tacticsDrag.fromY, toX: x, toY: y, color: tacticsDrag.color });
+    }
+    arrowPreview = null;
+    redraw();
+  }
+
+  tacticsDrag = null;
+}
+
+canvas.addEventListener('pointerup', finishCanvasDrag);
+canvas.addEventListener('pointercancel', finishCanvasDrag);
 
 // ─── STATS ────────────────────────────────────────────────────────────────────
 function updateStats() {
@@ -890,6 +1396,46 @@ function savePitch() {
 
   const link = document.createElement('a');
   link.download = `shot-tracker-${new Date().toISOString().slice(0,10)}.png`;
+  link.href = offCanvas.toDataURL('image/png');
+  link.click();
+
+  showToast('Image saved!');
+}
+
+// ─── TACTICS: RESET & SAVE ─────────────────────────────────────────────────────
+function confirmResetTactics() {
+  if (tacticsTokens.length === 0 && tacticsArrows.length === 0) {
+    showToast('Nothing to reset');
+    return;
+  }
+  if (confirm('Clear the tactics board?')) {
+    tacticsTokens = [];
+    tacticsArrows = [];
+    arrowPreview = null;
+    nextRedNumber = 1;
+    nextBlueNumber = 1;
+    redraw();
+    showToast('Board cleared');
+  }
+}
+
+function saveTactics() {
+  if (tacticsTokens.length === 0) {
+    showToast('Add some players first');
+    return;
+  }
+
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = canvasW;
+  offCanvas.height = canvasH;
+  const offCtx = offCanvas.getContext('2d');
+
+  drawFullPitch(offCtx);
+  tacticsArrows.forEach(a => drawArrowLine(a, offCtx));
+  tacticsTokens.forEach(t => drawToken(t, offCtx));
+
+  const link = document.createElement('a');
+  link.download = `tactics-board-${new Date().toISOString().slice(0,10)}.png`;
   link.href = offCanvas.toDataURL('image/png');
   link.click();
 
