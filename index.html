@@ -341,11 +341,101 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    /* ─── MOBILE TWEAKS ─── */
-    @media (max-width: 500px) {
-      :root { --panel-width: 120px; }
-      .tool-btn .btn-sub { display: none; }
+    /* ─── MOBILE: bottom toolbar layout ───────────────────────────────────────
+       Narrow width (portrait phones) or short height (landscape phones) —
+       swap the left sidebar for a compact bottom bar so the pitch gets the
+       full screen and nothing gets clipped off the bottom of a fixed-height
+       column. overflow-x:auto on #panel is a safety net on very narrow
+       devices, not the primary way to reach the buttons. */
+    @media (max-width: 700px), (max-height: 520px) {
+      #app {
+        flex-direction: column;
+      }
+
+      #panel {
+        order: 2;
+        width: 100%;
+        min-width: 0;
+        max-height: 84px;
+        flex-direction: row;
+        align-items: center;
+        border-right: none;
+        border-top: 1px solid var(--panel-border);
+        overflow-x: auto;
+        overflow-y: hidden;
+        touch-action: pan-x;
+        padding: 8px 10px;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+
+      #panel-header,
+      .section-label,
+      .btn-sub,
+      .conversion-label,
+      .conversion-bar-bg {
+        display: none;
+      }
+
+      .tool-section,
+      .stats-section,
+      .actions-section {
+        padding: 0;
+        border-bottom: none;
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .tool-btn {
+        width: auto;
+        margin-bottom: 0;
+        padding: 8px 10px;
+      }
+
+      .stats-section {
+        gap: 14px;
+        padding: 0 4px;
+        border-left: 1px solid var(--panel-border);
+        border-right: 1px solid var(--panel-border);
+        margin: 0 2px;
+      }
+
+      .stat-row {
+        flex-direction: column-reverse;
+        align-items: flex-start;
+        gap: 2px;
+        margin-bottom: 0;
+      }
+
       .stat-value { font-size: 15px; }
+      .stat-label { font-size: 8px; }
+
+      .stat-conversion {
+        margin: 0;
+        padding: 0;
+        border-top: none;
+        text-align: center;
+      }
+      .conversion-pct { margin-top: 0; font-size: 13px; }
+
+      .action-btn {
+        width: auto;
+        padding: 8px 10px;
+      }
+
+      .action-btn .btn-text {
+        white-space: nowrap;
+      }
+    }
+
+    /* Very narrow phones — icons only, no more shrinking room */
+    @media (max-width: 360px) {
+      .action-btn .btn-text,
+      .tool-btn .btn-label {
+        display: none;
+      }
     }
 
   </style>
@@ -409,18 +499,18 @@
     </div>
 
     <div class="actions-section">
-      <button class="action-btn save-btn" onclick="savePitch()">
+      <button class="action-btn save-btn" onclick="savePitch()" title="Save Image">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
           <path d="M2 2h9l3 3v9a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1zm7 0v4H5V2h4zm2 9H5v3h6v-3z"/>
         </svg>
-        Save Image
+        <span class="btn-text">Save Image</span>
       </button>
-      <button class="action-btn reset-btn" onclick="confirmReset()">
+      <button class="action-btn reset-btn" onclick="confirmReset()" title="Reset">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
           <path d="M8 2a6 6 0 100 12A6 6 0 008 2zM1 8a7 7 0 1114 0A7 7 0 011 8z"/>
           <path d="M8 5v3l2 2-1 1-2.5-2.5V5H8z"/>
         </svg>
-        Reset
+        <span class="btn-text">Reset</span>
       </button>
     </div>
   </div>
