@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f1923" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Shot Tracker" />
+  <meta name="description" content="Football coach shot tracking tool" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Shot Tracker — Coach Tool</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg: #0f1923;
+      --panel: #162030;
+      --panel-border: #243347;
+      --text: #e8edf2;
+      --text-muted: #7a90a8;
+      --accent: #1a8fff;
+      --attempt-color: #3a8bff;
+      --goal-color: #e03535;
+      --btn-bg: #1e2f42;
+      --btn-hover: #243a52;
+      --btn-active-border: #1a8fff;
+      --font: 'Inter', system-ui, sans-serif;
+      --panel-width: 160px;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      touch-action: none;
+    }
+
+    #app {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ─── SIDEBAR PANEL ─── */
+    #panel {
+      width: var(--panel-width);
+      min-width: var(--panel-width);
+      background: var(--panel);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    #panel-header {
+      padding: 16px 12px 12px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    #panel-header h1 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      line-height: 1.2;
+    }
+
+    #panel-header .subtitle {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 3px;
+      opacity: 0.6;
+    }
+
+    /* ─── TOOL BUTTONS ─── */
+    .tool-section {
+      padding: 14px 12px 10px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .section-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      opacity: 0.7;
+    }
+
+    .tool-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      background: var(--btn-bg);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-bottom: 7px;
+      user-select: none;
+    }
+
+    .tool-btn:last-child { margin-bottom: 0; }
+
+    .tool-btn:hover {
+      background: var(--btn-hover);
+    }
+
+    .tool-btn.active {
+      border-color: var(--active-color, var(--btn-active-border));
+      background: color-mix(in srgb, var(--active-color, var(--btn-active-border)) 12%, var(--btn-bg));
+    }
+
+    .tool-btn .dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2.5px solid currentColor;
+    }
+
+    .tool-btn.attempt-btn .dot {
+      background: rgba(58,139,255,0.25);
+      border-color: var(--attempt-color);
+      color: var(--attempt-color);
+    }
+    .tool-btn.attempt-btn { --active-color: var(--attempt-color); }
+
+    .tool-btn.goal-btn .dot {
+      background: rgba(224,53,53,0.25);
+      border-color: var(--goal-color);
+      color: var(--goal-color);
+    }
+    .tool-btn.goal-btn { --active-color: var(--goal-color); }
+
+    .tool-btn .btn-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .tool-btn .btn-sub {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ─── STATS ─── */
+    .stats-section {
+      padding: 14px 12px 12px;
+      border-bottom: 1px solid var(--panel-border);
+      flex: 1;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 7px;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      display: flex;
+      align-items: center;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-conversion {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--panel-border);
+    }
+
+    .conversion-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 5px;
+    }
+
+    .conversion-bar-bg {
+      background: var(--btn-bg);
+      border-radius: 3px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .conversion-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--attempt-color), var(--goal-color));
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .conversion-pct {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 5px;
+    }
+
+    /* ─── ACTION BUTTONS ─── */
+    .actions-section {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+      background: var(--btn-bg);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      user-select: none;
+    }
+
+    .action-btn:hover { background: var(--btn-hover); }
+
+    .action-btn.save-btn {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .action-btn.save-btn:hover {
+      background: #2196ff;
+    }
+
+    .action-btn.reset-btn {
+      border-color: rgba(224,53,53,0.4);
+      color: #e88;
+    }
+
+    .action-btn.reset-btn:hover {
+      background: rgba(224,53,53,0.15);
+    }
+
+    /* ─── PITCH AREA ─── */
+    #pitch-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #0d1720;
+      position: relative;
+    }
+
+    #pitch-wrapper {
+      position: relative;
+      user-select: none;
+    }
+
+    #pitch-wrapper canvas {
+      display: block;
+      touch-action: none;
+    }
+
+    /* ─── ACTIVE TOOL INDICATOR ─── */
+    #cursor-indicator {
+      position: fixed;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.15s;
+      border: 2.5px solid currentColor;
+    }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e2f42;
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 9999;
+      border: 1px solid var(--panel-border);
+      white-space: nowrap;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ─── MOBILE TWEAKS ─── */
+    @media (max-width: 500px) {
+      :root { --panel-width: 120px; }
+      .tool-btn .btn-sub { display: none; }
+      .stat-value { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <!-- SIDEBAR -->
+  <div id="panel">
+    <div id="panel-header">
+      <h1>Shot<br>Tracker</h1>
+      <div class="subtitle">Coach Tool</div>
+    </div>
+
+    <div class="tool-section">
+      <div class="section-label">Mark</div>
+
+      <button class="tool-btn attempt-btn" id="btn-attempt" onclick="setTool('attempt')">
+        <div class="dot"></div>
+        <div>
+          <div class="btn-label">Attempt</div>
+          <div class="btn-sub">Off target</div>
+        </div>
+      </button>
+
+      <button class="tool-btn goal-btn" id="btn-goal" onclick="setTool('goal')">
+        <div class="dot"></div>
+        <div>
+          <div class="btn-label">Goal</div>
+          <div class="btn-sub">Scored</div>
+        </div>
+      </button>
+    </div>
+
+    <div class="stats-section">
+      <div class="section-label">Session</div>
+
+      <div class="stat-row">
+        <div class="stat-label">
+          <div class="stat-dot" style="background:var(--attempt-color)"></div>
+          Attempts
+        </div>
+        <div class="stat-value" id="stat-attempts">0</div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-label">
+          <div class="stat-dot" style="background:var(--goal-color)"></div>
+          Goals
+        </div>
+        <div class="stat-value" id="stat-goals">0</div>
+      </div>
+
+      <div class="stat-conversion">
+        <div class="conversion-label">Conversion</div>
+        <div class="conversion-bar-bg">
+          <div class="conversion-bar-fill" id="conv-bar"></div>
+        </div>
+        <div class="conversion-pct" id="stat-conv">—</div>
+      </div>
+    </div>
+
+    <div class="actions-section">
+      <button class="action-btn save-btn" onclick="savePitch()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M2 2h9l3 3v9a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1zm7 0v4H5V2h4zm2 9H5v3h6v-3z"/>
+        </svg>
+        Save Image
+      </button>
+      <button class="action-btn reset-btn" onclick="confirmReset()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 2a6 6 0 100 12A6 6 0 008 2zM1 8a7 7 0 1114 0A7 7 0 011 8z"/>
+          <path d="M8 5v3l2 2-1 1-2.5-2.5V5H8z"/>
+        </svg>
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- PITCH -->
+  <div id="pitch-container">
+    <div id="pitch-wrapper">
+      <canvas id="pitch-canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<div id="cursor-indicator"></div>
+<div id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let activeTool = null;   // 'attempt' | 'goal' | null
+let markers = [];        // { type, x, y, dist } — x/y in 0..1 pitch coords
+let pitchImg = new Image();
+let canvasW = 0, canvasH = 0;
+let isInitialized = false;
+
+const canvas = document.getElementById('pitch-canvas');
+const ctx = canvas.getContext('2d');
+
+// ─── PITCH REAL-WORLD DIMENSIONS (half-pitch) ────────────────────────────────
+// Standard full pitch ≈ 105m × 68m, so half = 52.5m deep × 68m wide
+// Goal centre at middle of top edge (at the 0m end line)
+// We show top half (attacking half) with goal at top.
+// Pitch: 68m wide, 52.5m deep. Goal on top edge at centre.
+const PITCH_W_M = 68;
+const PITCH_H_M = 52.5;
+const GOAL_X_M = PITCH_W_M / 2;   // 34m from left
+const GOAL_Y_M = 0;               // top edge
+
+function distToGoal(normX, normY) {
+  // normX, normY are 0..1 fractions of pitch canvas
+  const realX = normX * PITCH_W_M;
+  const realY = normY * PITCH_H_M;
+  const dx = realX - GOAL_X_M;
+  const dy = realY - GOAL_Y_M;
+  return Math.sqrt(dx * dx + dy * dy).toFixed(1);
+}
+
+// ─── TOOL SELECTION ───────────────────────────────────────────────────────────
+function setTool(tool) {
+  if (activeTool === tool) {
+    activeTool = null;
+  } else {
+    activeTool = tool;
+  }
+  updateToolUI();
+}
+
+function updateToolUI() {
+  const btnAttempt = document.getElementById('btn-attempt');
+  const btnGoal = document.getElementById('btn-goal');
+  btnAttempt.classList.toggle('active', activeTool === 'attempt');
+  btnGoal.classList.toggle('active', activeTool === 'goal');
+
+  const cursor = document.getElementById('cursor-indicator');
+  if (activeTool === 'attempt') {
+    cursor.style.color = '#3a8bff';
+    cursor.style.background = 'rgba(58,139,255,0.2)';
+  } else if (activeTool === 'goal') {
+    cursor.style.color = '#e03535';
+    cursor.style.background = 'rgba(224,53,53,0.2)';
+  }
+}
+
+// ─── CANVAS SETUP ─────────────────────────────────────────────────────────────
+function resizeCanvas() {
+  const container = document.getElementById('pitch-container');
+  const cW = container.clientWidth - 20;
+  const cH = container.clientHeight - 20;
+
+  // Keep aspect ratio of the original image (3765 × 2848)
+  const imgRatio = 3765 / 2848;
+  let w = cW;
+  let h = w / imgRatio;
+  if (h > cH) {
+    h = cH;
+    w = h * imgRatio;
+  }
+
+  canvas.width = Math.floor(w);
+  canvas.height = Math.floor(h);
+  canvasW = canvas.width;
+  canvasH = canvas.height;
+
+  redraw();
+}
+
+// ─── DRAWING ──────────────────────────────────────────────────────────────────
+function redraw() {
+  ctx.clearRect(0, 0, canvasW, canvasH);
+
+  if (pitchImg.complete && pitchImg.naturalWidth) {
+    ctx.drawImage(pitchImg, 0, 0, canvasW, canvasH);
+  } else {
+    // Fallback: draw a simple pitch
+    drawFallbackPitch();
+  }
+
+  markers.forEach(m => drawMarker(m));
+}
+
+function drawFallbackPitch() {
+  // Dark green pitch
+  ctx.fillStyle = '#3a7d44';
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  // Stripes
+  const stripes = 8;
+  for (let i = 0; i < stripes; i++) {
+    if (i % 2 === 0) {
+      ctx.fillStyle = 'rgba(0,0,0,0.06)';
+      ctx.fillRect(0, i * canvasH / stripes, canvasW, canvasH / stripes);
+    }
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = Math.max(1.5, canvasW * 0.002);
+
+  // Penalty area (top)
+  const pa_w = canvasW * 0.53;
+  const pa_h = canvasH * 0.34;
+  const pa_x = (canvasW - pa_w) / 2;
+  ctx.strokeRect(pa_x, 0, pa_w, pa_h);
+
+  // 6-yard box
+  const sb_w = canvasW * 0.24;
+  const sb_h = canvasH * 0.12;
+  const sb_x = (canvasW - sb_w) / 2;
+  ctx.strokeRect(sb_x, 0, sb_w, sb_h);
+
+  // Penalty spot
+  const ps_x = canvasW / 2;
+  const ps_y = canvasH * 0.22;
+  ctx.beginPath();
+  ctx.arc(ps_x, ps_y, Math.max(2, canvasW * 0.003), 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fill();
+
+  // Penalty arc
+  ctx.beginPath();
+  ctx.arc(ps_x, pa_h, canvasW * 0.15, Math.PI * 0.13, Math.PI * 0.87);
+  ctx.stroke();
+
+  // Centre circle (bottom half)
+  ctx.beginPath();
+  ctx.arc(canvasW / 2, canvasH, canvasW * 0.15, Math.PI, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawMarker(m) {
+  const cx = m.x * canvasW;
+  const cy = m.y * canvasH;
+
+  const isAttempt = m.type === 'attempt';
+  const baseColor = isAttempt ? [58, 139, 255] : [224, 53, 53];
+  const r = `rgb(${baseColor[0]},${baseColor[1]},${baseColor[2]})`;
+  const rAlpha = `rgba(${baseColor[0]},${baseColor[1]},${baseColor[2]},0.25)`;
+
+  const radius = Math.max(10, canvasW * 0.016);
+  const fontSize = Math.max(9, canvasW * 0.012);
+
+  // Glow shadow
+  ctx.shadowColor = r;
+  ctx.shadowBlur = 8;
+
+  // Filled circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fillStyle = rAlpha;
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = r;
+  ctx.lineWidth = Math.max(1.5, canvasW * 0.002);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Distance text below circle
+  const label = `${m.dist}m`;
+  ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+
+  // Text shadow for legibility
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillText(label, cx + 1, cy + radius + fontSize + 2);
+  ctx.fillStyle = '#fff';
+  ctx.fillText(label, cx, cy + radius + fontSize + 1);
+
+  ctx.textAlign = 'left';
+}
+
+// ─── PITCH CLICK / TOUCH ──────────────────────────────────────────────────────
+function getPitchCoords(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (clientX - rect.left) / rect.width;
+  const y = (clientY - rect.top) / rect.height;
+  return { x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) };
+}
+
+canvas.addEventListener('click', (e) => {
+  if (!activeTool) {
+    showToast('Select Attempt or Goal first');
+    return;
+  }
+  const { x, y } = getPitchCoords(e.clientX, e.clientY);
+  placeMarker(x, y);
+});
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  if (!activeTool) {
+    showToast('Select Attempt or Goal first');
+    return;
+  }
+  const touch = e.changedTouches[0];
+  const { x, y } = getPitchCoords(touch.clientX, touch.clientY);
+  placeMarker(x, y);
+}, { passive: false });
+
+function placeMarker(x, y) {
+  const dist = distToGoal(x, y);
+  markers.push({ type: activeTool, x, y, dist });
+  updateStats();
+  redraw();
+}
+
+// ─── CUSTOM CURSOR ────────────────────────────────────────────────────────────
+const cursorEl = document.getElementById('cursor-indicator');
+
+document.addEventListener('mousemove', (e) => {
+  if (activeTool) {
+    cursorEl.style.opacity = '0.85';
+    cursorEl.style.left = e.clientX + 'px';
+    cursorEl.style.top = e.clientY + 'px';
+  } else {
+    cursorEl.style.opacity = '0';
+  }
+});
+
+canvas.addEventListener('mouseenter', () => {
+  if (activeTool) canvas.style.cursor = 'none';
+});
+canvas.addEventListener('mouseleave', () => {
+  canvas.style.cursor = 'default';
+  cursorEl.style.opacity = '0';
+});
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const attempts = markers.filter(m => m.type === 'attempt').length;
+  const goals = markers.filter(m => m.type === 'goal').length;
+  const total = attempts + goals;
+  const conv = total > 0 ? Math.round((goals / total) * 100) : 0;
+
+  document.getElementById('stat-attempts').textContent = attempts;
+  document.getElementById('stat-goals').textContent = goals;
+  document.getElementById('stat-conv').textContent = total > 0 ? `${conv}%` : '—';
+  document.getElementById('conv-bar').style.width = `${conv}%`;
+}
+
+// ─── RESET ────────────────────────────────────────────────────────────────────
+function confirmReset() {
+  if (markers.length === 0) {
+    showToast('Nothing to reset');
+    return;
+  }
+  if (confirm('Clear all markers from the pitch?')) {
+    markers = [];
+    updateStats();
+    redraw();
+    showToast('Pitch cleared');
+  }
+}
+
+// ─── SAVE ─────────────────────────────────────────────────────────────────────
+function savePitch() {
+  if (markers.length === 0) {
+    showToast('Add some markers first');
+    return;
+  }
+
+  // Create an off-screen canvas with labels
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = canvasW;
+  offCanvas.height = canvasH;
+  const offCtx = offCanvas.getContext('2d');
+
+  // Draw pitch image
+  if (pitchImg.complete && pitchImg.naturalWidth) {
+    offCtx.drawImage(pitchImg, 0, 0, canvasW, canvasH);
+  } else {
+    offCtx.drawImage(canvas, 0, 0);
+  }
+
+  // Redraw markers on off-screen canvas
+  markers.forEach(m => {
+    const cx = m.x * canvasW;
+    const cy = m.y * canvasH;
+    const isAttempt = m.type === 'attempt';
+    const baseColor = isAttempt ? [58, 139, 255] : [224, 53, 53];
+    const r = `rgb(${baseColor[0]},${baseColor[1]},${baseColor[2]})`;
+    const rAlpha = `rgba(${baseColor[0]},${baseColor[1]},${baseColor[2]},0.25)`;
+    const radius = Math.max(10, canvasW * 0.016);
+    const fontSize = Math.max(9, canvasW * 0.012);
+
+    offCtx.shadowColor = r;
+    offCtx.shadowBlur = 8;
+    offCtx.beginPath();
+    offCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+    offCtx.fillStyle = rAlpha;
+    offCtx.fill();
+    offCtx.strokeStyle = r;
+    offCtx.lineWidth = Math.max(1.5, canvasW * 0.002);
+    offCtx.stroke();
+    offCtx.shadowBlur = 0;
+
+    const label = `${m.dist}m`;
+    offCtx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
+    offCtx.textAlign = 'center';
+    offCtx.fillStyle = 'rgba(0,0,0,0.7)';
+    offCtx.fillText(label, cx + 1, cy + radius + fontSize + 2);
+    offCtx.fillStyle = '#fff';
+    offCtx.fillText(label, cx, cy + radius + fontSize + 1);
+    offCtx.textAlign = 'left';
+  });
+
+  // Add legend at bottom-right
+  const attempts = markers.filter(m => m.type === 'attempt').length;
+  const goals = markers.filter(m => m.type === 'goal').length;
+  const total = attempts + goals;
+  const conv = total > 0 ? Math.round((goals / total) * 100) : 0;
+  const legFontSize = Math.max(10, canvasW * 0.012);
+  const pad = legFontSize * 1.2;
+  const legX = canvasW - pad;
+  const legY = canvasH - pad;
+
+  offCtx.font = `bold ${legFontSize}px Inter, system-ui, sans-serif`;
+  offCtx.textAlign = 'right';
+  offCtx.fillStyle = 'rgba(0,0,0,0.6)';
+  offCtx.fillRect(legX - legFontSize * 10, legY - legFontSize * 3, legFontSize * 10.5, legFontSize * 3.5);
+  offCtx.fillStyle = '#fff';
+  offCtx.fillText(`Attempts: ${attempts}  Goals: ${goals}  Conv: ${total > 0 ? conv + '%' : '—'}`, legX - pad * 0.2, legY - legFontSize * 0.5);
+  offCtx.textAlign = 'left';
+
+  const link = document.createElement('a');
+  link.download = `shot-tracker-${new Date().toISOString().slice(0,10)}.png`;
+  link.href = offCanvas.toDataURL('image/png');
+  link.click();
+
+  showToast('Image saved!');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+pitchImg.crossOrigin = 'anonymous';
+pitchImg.onload = () => {
+  isInitialized = true;
+  resizeCanvas();
+};
+pitchImg.onerror = () => {
+  isInitialized = true;
+  resizeCanvas();
+};
+pitchImg.src = 'half-pitch.png';
+
+window.addEventListener('resize', resizeCanvas);
+
+// ─── SERVICE WORKER ───────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+
+</body>
+</html>
