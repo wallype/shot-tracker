@@ -11,19 +11,6 @@ A Progressive Web App (PWA) for football coaches to track goal attempts and scor
 - 🔄 **Reset** — clears all markers
 - 📱 **Touch & mouse** support (mobile friendly)
 - ✈️ **Offline** — works without internet after first load (PWA)
-- 🔒 **Password gate** — simple client-side lock screen so casual visitors can't open the app
-
-## Access
-
-The app is behind a lock screen. Current password: `PitchAccess2026`
-
-This is a **client-side deterrent only**, not real security — the page is static (no server), so the password check runs in the visitor's browser and its hash is visible in `index.html`'s source. Anyone determined enough to view source can bypass it. Don't put sensitive data behind this if that matters.
-
-To change the password, edit `LOCK_HASH` in `index.html` (search for `ACCESS GATE`) — set it to the SHA-256 hex digest of the new password, e.g.:
-
-```bash
-echo -n "your-new-password" | shasum -a 256
-```
 
 ## Deploy to GitHub Pages
 

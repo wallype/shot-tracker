@@ -348,88 +348,11 @@
       .stat-value { font-size: 15px; }
     }
 
-    /* ─── LOCK SCREEN ─── */
-    #lock-screen {
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-    }
-
-    #lock-box {
-      width: 260px;
-      text-align: center;
-    }
-
-    #lock-box h2 {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      margin-bottom: 4px;
-    }
-
-    #lock-box .lock-sub {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 18px;
-    }
-
-    #lock-input {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--panel-border);
-      background: var(--btn-bg);
-      color: var(--text);
-      font-size: 13px;
-      outline: none;
-      margin-bottom: 10px;
-    }
-
-    #lock-input:focus {
-      border-color: var(--accent);
-    }
-
-    #lock-submit {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      background: var(--accent);
-      color: #fff;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    #lock-error {
-      font-size: 11px;
-      color: var(--goal-color);
-      margin-top: 10px;
-      min-height: 14px;
-    }
-
-    #app.locked {
-      display: none;
-    }
   </style>
 </head>
 <body>
 
-<div id="lock-screen">
-  <div id="lock-box">
-    <h2>Shot Tracker</h2>
-    <div class="lock-sub">Enter password to continue</div>
-    <input type="password" id="lock-input" placeholder="Password" autocomplete="off" />
-    <button id="lock-submit">Unlock</button>
-    <div id="lock-error"></div>
-  </div>
-</div>
-
-<div id="app" class="locked">
+<div id="app">
   <!-- SIDEBAR -->
   <div id="panel">
     <div id="panel-header">
@@ -514,47 +437,6 @@
 <div id="toast"></div>
 
 <script>
-// ─── ACCESS GATE ──────────────────────────────────────────────────────────────
-// Client-side deterrent only — this is a static site, so the check happens in
-// the browser and the hash below is visible to anyone who reads the source.
-// It keeps casual visitors out but is not real security for sensitive data.
-const LOCK_HASH = '90046912c6114ebf2a3f72bf7ca36925e2058f362beaf0d0d2122ebb486377b7';
-const LOCK_STORAGE_KEY = 'shot-tracker-unlocked';
-
-async function sha256Hex(text) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function unlockApp() {
-  document.getElementById('lock-screen').remove();
-  document.getElementById('app').classList.remove('locked');
-}
-
-async function attemptUnlock() {
-  const input = document.getElementById('lock-input');
-  const errorEl = document.getElementById('lock-error');
-  const hash = await sha256Hex(input.value);
-  if (hash === LOCK_HASH) {
-    localStorage.setItem(LOCK_STORAGE_KEY, LOCK_HASH);
-    unlockApp();
-  } else {
-    errorEl.textContent = 'Incorrect password';
-    input.value = '';
-    input.focus();
-  }
-}
-
-if (localStorage.getItem(LOCK_STORAGE_KEY) === LOCK_HASH) {
-  unlockApp();
-} else {
-  document.getElementById('lock-submit').addEventListener('click', attemptUnlock);
-  document.getElementById('lock-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') attemptUnlock();
-  });
-  document.getElementById('lock-input').focus();
-}
-
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let activeTool = null;   // 'attempt' | 'goal' | null
 let markers = [];        // { type, x, y, dist } — x/y in 0..1 pitch coords
