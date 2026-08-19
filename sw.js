@@ -1,9 +1,8 @@
-const CACHE = 'shot-tracker-v1';
+const CACHE = 'shot-tracker-v2';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/half-pitch.png',
   '/icon-192.png',
   '/icon-512.png'
 ];

@@ -729,9 +729,7 @@ window.addEventListener('orientationchange', setViewportHeightVar);
 let currentMode = 'shot'; // 'shot' | 'tactics'
 let activeTool = null;   // 'attempt' | 'goal' | null
 let markers = [];        // { type, x, y, dist } — x/y in 0..1 pitch coords
-let pitchImg = new Image();
 let canvasW = 0, canvasH = 0;
-let isInitialized = false;
 
 // ─── TACTICS STATE ────────────────────────────────────────────────────────────
 let tacticsTool = 'move'; // 'move' | 'arrow'
@@ -822,10 +820,10 @@ function resizeCanvas() {
   const cW = container.clientWidth - 20;
   const cH = container.clientHeight - 20;
 
-  // Shot Tracker: keep aspect ratio of the half-pitch image (3765 × 2848).
-  // Tactics: a full pitch drawn tall/portrait (68m wide × 105m deep) so it
-  // suits phone screens as well as desktop.
-  const ratio = currentMode === 'tactics' ? (PITCH_W_M / PITCH_H_M_FULL) : (3765 / 2848);
+  // Both modes size the canvas to the real-world pitch proportions: half
+  // depth (52.5m) for Shot Tracker, full depth (105m) for Tactics — so line
+  // markings drawn from the same meter-based measurements line up correctly.
+  const ratio = currentMode === 'tactics' ? (PITCH_W_M / PITCH_H_M_FULL) : (PITCH_W_M / PITCH_H_M);
   let w = cW;
   let h = w / ratio;
   if (h > cH) {
@@ -853,62 +851,56 @@ function redraw() {
     return;
   }
 
-  if (pitchImg.complete && pitchImg.naturalWidth) {
-    ctx.drawImage(pitchImg, 0, 0, canvasW, canvasH);
-  } else {
-    // Fallback: draw a simple pitch
-    drawFallbackPitch();
-  }
-
+  drawHalfPitch();
   markers.forEach(m => drawMarker(m));
 }
 
-function drawFallbackPitch() {
-  // Dark green pitch
-  ctx.fillStyle = '#3a7d44';
-  ctx.fillRect(0, 0, canvasW, canvasH);
+// Same visual style and real-world (meter-based) proportions as the Tactics
+// full pitch (drawFullPitch, below), just cropped to one end — top and side
+// boundary lines only, no bottom line, with the centre circle peeking in
+// from the open bottom edge where the halfway line would be.
+function drawHalfPitch(c = ctx) {
+  const s = canvasW / PITCH_W_M; // pixels per metre
 
-  // Stripes
-  const stripes = 8;
+  c.fillStyle = '#2f6b3a';
+  c.fillRect(0, 0, canvasW, canvasH);
+
+  const stripes = 6;
   for (let i = 0; i < stripes; i++) {
     if (i % 2 === 0) {
-      ctx.fillStyle = 'rgba(0,0,0,0.06)';
-      ctx.fillRect(0, i * canvasH / stripes, canvasW, canvasH / stripes);
+      c.fillStyle = 'rgba(0,0,0,0.06)';
+      c.fillRect(0, i * canvasH / stripes, canvasW, canvasH / stripes);
     }
   }
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-  ctx.lineWidth = Math.max(1.5, canvasW * 0.002);
+  c.strokeStyle = 'rgba(255,255,255,0.85)';
+  c.lineWidth = Math.max(1.5, canvasW * 0.0035);
 
-  // Penalty area (top)
-  const pa_w = canvasW * 0.53;
-  const pa_h = canvasH * 0.34;
+  const m = canvasW * 0.02;
+  c.beginPath();
+  c.moveTo(m, canvasH);
+  c.lineTo(m, m);
+  c.lineTo(canvasW - m, m);
+  c.lineTo(canvasW - m, canvasH);
+  c.stroke();
+
+  const pa_w = 40.32 * s, pa_h = 16.5 * s;
   const pa_x = (canvasW - pa_w) / 2;
-  ctx.strokeRect(pa_x, 0, pa_w, pa_h);
+  c.strokeRect(pa_x, m, pa_w, pa_h);
 
-  // 6-yard box
-  const sb_w = canvasW * 0.24;
-  const sb_h = canvasH * 0.12;
+  const sb_w = 18.32 * s, sb_h = 5.5 * s;
   const sb_x = (canvasW - sb_w) / 2;
-  ctx.strokeRect(sb_x, 0, sb_w, sb_h);
+  c.strokeRect(sb_x, m, sb_w, sb_h);
 
-  // Penalty spot
-  const ps_x = canvasW / 2;
-  const ps_y = canvasH * 0.22;
-  ctx.beginPath();
-  ctx.arc(ps_x, ps_y, Math.max(2, canvasW * 0.003), 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.fill();
+  c.beginPath();
+  c.arc(canvasW / 2, m + 11 * s, Math.max(2, canvasW * 0.004), 0, Math.PI * 2);
+  c.fillStyle = 'rgba(255,255,255,0.85)';
+  c.fill();
 
-  // Penalty arc
-  ctx.beginPath();
-  ctx.arc(ps_x, pa_h, canvasW * 0.15, Math.PI * 0.13, Math.PI * 0.87);
-  ctx.stroke();
-
-  // Centre circle (bottom half)
-  ctx.beginPath();
-  ctx.arc(canvasW / 2, canvasH, canvasW * 0.15, Math.PI, Math.PI * 2);
-  ctx.stroke();
+  // Centre circle, cut off by the open bottom edge
+  c.beginPath();
+  c.arc(canvasW / 2, canvasH, 9.15 * s, Math.PI, Math.PI * 2);
+  c.stroke();
 }
 
 function drawMarker(m) {
@@ -955,11 +947,13 @@ function drawMarker(m) {
 
 // ─── TACTICS: FULL PITCH ──────────────────────────────────────────────────────
 // Drawn tall/portrait (68m wide × 105m deep), goal at top and bottom, halfway
-// line and centre circle in the middle — same programmatic style as the
-// fallback half-pitch above, just mirrored for both ends. Each drawing
-// function takes an optional context so Save can render to an off-screen
-// canvas with the exact same code path as the live view.
+// line and centre circle in the middle — same style and real-world (meter
+// based) proportions as the half pitch above, mirrored for both ends. Each
+// drawing function takes an optional context so Save can render to an
+// off-screen canvas with the exact same code path as the live view.
 function drawFullPitch(c = ctx) {
+  const s = canvasW / PITCH_W_M; // pixels per metre
+
   c.fillStyle = '#2f6b3a';
   c.fillRect(0, 0, canvasW, canvasH);
 
@@ -985,7 +979,7 @@ function drawFullPitch(c = ctx) {
   c.stroke();
 
   c.beginPath();
-  c.arc(canvasW / 2, canvasH / 2, canvasW * 0.16, 0, Math.PI * 2);
+  c.arc(canvasW / 2, canvasH / 2, 9.15 * s, 0, Math.PI * 2);
   c.stroke();
 
   c.beginPath();
@@ -993,14 +987,12 @@ function drawFullPitch(c = ctx) {
   c.fillStyle = 'rgba(255,255,255,0.85)';
   c.fill();
 
-  // Penalty areas, 6-yard boxes, spots and arcs — mirrored top and bottom
-  const pa_w = canvasW * 0.6;
-  const pa_h = canvasH * 0.16;
+  // Penalty areas, 6-yard boxes and spots — mirrored top and bottom
+  const pa_w = 40.32 * s, pa_h = 16.5 * s;
   const pa_x = (canvasW - pa_w) / 2;
-  const sb_w = canvasW * 0.28;
-  const sb_h = canvasH * 0.055;
+  const sb_w = 18.32 * s, sb_h = 5.5 * s;
   const sb_x = (canvasW - sb_w) / 2;
-  const ps_offset = canvasH * 0.105;
+  const ps_offset = 11 * s;
 
   [{ dir: 1, base: m }, { dir: -1, base: canvasH - m }].forEach(({ dir, base }) => {
     const pa_y = dir === 1 ? base : base - pa_h;
@@ -1014,12 +1006,6 @@ function drawFullPitch(c = ctx) {
     c.arc(canvasW / 2, ps_y, Math.max(2, canvasW * 0.004), 0, Math.PI * 2);
     c.fillStyle = 'rgba(255,255,255,0.85)';
     c.fill();
-
-    c.beginPath();
-    const startAngle = dir === 1 ? Math.PI * 1.13 : Math.PI * 0.13;
-    const endAngle = dir === 1 ? Math.PI * 1.87 : Math.PI * 0.87;
-    c.arc(canvasW / 2, ps_y, canvasW * 0.16, startAngle, endAngle);
-    c.stroke();
   });
 }
 
@@ -1337,12 +1323,7 @@ function savePitch() {
   offCanvas.height = canvasH;
   const offCtx = offCanvas.getContext('2d');
 
-  // Draw pitch image
-  if (pitchImg.complete && pitchImg.naturalWidth) {
-    offCtx.drawImage(pitchImg, 0, 0, canvasW, canvasH);
-  } else {
-    offCtx.drawImage(canvas, 0, 0);
-  }
+  drawHalfPitch(offCtx);
 
   // Redraw markers on off-screen canvas
   markers.forEach(m => {
@@ -1453,17 +1434,7 @@ function showToast(msg) {
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-pitchImg.crossOrigin = 'anonymous';
-pitchImg.onload = () => {
-  isInitialized = true;
-  resizeCanvas();
-};
-pitchImg.onerror = () => {
-  isInitialized = true;
-  resizeCanvas();
-};
-pitchImg.src = 'half-pitch.png';
-
+resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 // ─── SERVICE WORKER ───────────────────────────────────────────────────────────
